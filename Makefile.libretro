@@ -1,0 +1,72 @@
+TARGET_NAME := NJEMU
+SYSTEM_NAME := CPS2
+TARGET      := $(TARGET_NAME)_$(SYSTEM_NAME)_libretro_psp1.a
+
+
+CC  = psp-gcc$(EXE_EXT)
+CXX = psp-g++$(EXE_EXT)
+AR  = psp-ar$(EXE_EXT)
+PLATFORM_DEFINES := -DPSP
+
+
+DEFINES  += -D__LIBRETRO__ $(PLATFORM_DEFINES) -DHAVE_STDINT_H -DHAVE_INTTYPES_H -DINLINE=inline -DVIDEO_RGB565
+DEFINES  += -DBUILD_CPS2PSP=1 -DPBPNAME_STR='"CPS2PSP"' -DVERSION_STR='"2.35"' -DVERSION_MAJOR=2 -DVERSION_MINOR=3 -DVERSION_BUILD=5 -DPSP_SLIM=1 -DPSP_VIDEO_32BPP=0 -DRELEASE=0 -DCOMMAND_LIST=0 -D_PSP_FW_VERSION=150
+DEFINES  += -Ddriver=njemu_driver -Ddriver_t=njemu_driver_t
+#CFLAGS   += -fstrict-aliasing -falign-functions=32 -falign-loops -falign-labels -falign-jumps -Wall -Wundef -Wpointer-arith  -Wbad-function-cast -Wwrite-strings -Wmissing-prototypes -Wsign-compare -DZLIB_CONST
+#CFLAGS   += -Werror -fomit-frame-pointer
+CFLAGS   += $(DEFINES) -G0
+CXXFLAGS += $(DEFINES) -G0
+
+
+ifeq ($(DEBUG), 1)
+	CFLAGS += -O0 -g
+	CXXFLAGS += -O0 -g
+else
+	CFLAGS += -O2
+	CXXFLAGS += -O2 -fno-exceptions -fno-rtti -DHAVE_STDINT_H
+endif
+
+EMU_DIR := src
+LIBRETRO_DIR := libretro
+
+
+
+
+OBJS :=  $(EMU_DIR)/zip/zfile.o $(EMU_DIR)/zip/unzip.o $(EMU_DIR)/sound/sndintrf.o $(EMU_DIR)/common/cache.o $(EMU_DIR)/common/loadrom.o
+OBJS += $(EMU_DIR)/psp/ui.o $(EMU_DIR)/emumain.o $(EMU_DIR)/psp/ui_draw.o $(EMU_DIR)/psp/ui_menu.o
+#OBJS += $(EMU_DIR)/cps2/cps2.o
+OBJS += $(EMU_DIR)/common/cmdlist.o
+OBJS += $(EMU_DIR)/cpu/m68000/m68000.o $(EMU_DIR)/cpu/m68000/c68k.o $(EMU_DIR)/cpu/z80/z80.o $(EMU_DIR)/cpu/z80/cz80.o $(EMU_DIR)/common/coin.o
+OBJS += $(EMU_DIR)/psp/font/graphic.o $(EMU_DIR)/psp/font/ascii_14p.o $(EMU_DIR)/psp/font/font_s.o $(EMU_DIR)/psp/font/bshadow.o $(EMU_DIR)/psp/font/command.o $(EMU_DIR)/psp/font/ascii_14.o $(EMU_DIR)/psp/font/latin1_14.o $(EMU_DIR)/psp/font/gbk_s14.o $(EMU_DIR)/psp/font/gbk_tbl.o
+OBJS += $(EMU_DIR)/psp/config.o $(EMU_DIR)/psp/filer.o $(EMU_DIR)/psp/input.o $(EMU_DIR)/psp/ticker.o $(EMU_DIR)/psp/sound.o $(EMU_DIR)/psp/png.o $(EMU_DIR)/psp/video.o
+OBJS += $(EMU_DIR)/psp/ui_text.o
+
+OBJS += $(EMU_DIR)/cps2/cps2crpt.o $(EMU_DIR)/cps2/driver.o $(EMU_DIR)/cps2/memintrf.o $(EMU_DIR)/cps2/inptport.o $(EMU_DIR)/cps2/timer.o $(EMU_DIR)/cps2/vidhrdw.o $(EMU_DIR)/cps2/sprite.o $(EMU_DIR)/cps2/eeprom.o $(EMU_DIR)/sound/qsound.o
+
+OBJS += $(EMU_DIR)/psp/icon/cps_s.o $(EMU_DIR)/psp/icon/cps_l.o
+OBJS += $(LIBRETRO_DIR)/libretro.o
+
+INCDIRS := -I$(EMU_DIR) -I$(LIBRETRO_DIR) -I$(EMU_DIR)/cps2
+INCDIRS += -I$(shell psp-config --psp-prefix)/include -I$(shell psp-config --pspsdk-path)/include
+
+
+all: $(TARGET)
+
+$(TARGET): $(OBJS)
+	$(AR) rcs $@ $(OBJS)
+
+%.o: %.cpp
+	$(CXX) -c -o $@ $< $(CXXFLAGS) $(INCDIRS)
+
+%.o: %.c
+	$(CC) -c -o $@ $< $(CFLAGS) $(INCDIRS)
+
+clean-objs:
+	rm -f $(OBJS)
+
+clean:
+	rm -f $(OBJS)
+	rm -f $(TARGET)
+
+.PHONY: clean clean-objs
+
